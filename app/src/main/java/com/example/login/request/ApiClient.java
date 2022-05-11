@@ -5,59 +5,79 @@ import android.content.SharedPreferences;
 
 import com.example.login.model.Usuario;
 
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.util.ArrayList;
 
 
 public class ApiClient {
-    private static SharedPreferences sp;
+    private static File archivo;
 
-    private static SharedPreferences conectar(Context context)
-    {
-        if (sp==null)
-        {
-            sp=context.getSharedPreferences("datos",0);
+    private static void conectar(Context context){
+        if(archivo == null){
+            archivo  = new File(context.getFilesDir(),"objetos.dat");
         }
-        return sp;
     }
 
-    public static void guardar(Context context,Usuario usuario)
-    {
-        SharedPreferences sp=conectar(context);
-        SharedPreferences.Editor editor= sp.edit();
-        editor.putLong("dni",usuario.getDni());
-        editor.putString("apellido",usuario.getApellido());
-        editor.putString("nombre",usuario.getNombre());
-        editor.putString("email", usuario.getMail());
-        editor.putString("password", usuario.getPassword());
-        editor.commit();
+    public static void guardar(Context context, Usuario usuario){
+        conectar(context);
+        try {
+            //nodo
+            FileOutputStream fo = new FileOutputStream(archivo);
+            //buffer
+            BufferedOutputStream bo = new BufferedOutputStream(fo);
+            //Convertir de objeto a byte
+            ObjectOutputStream ous = new ObjectOutputStream(bo);
+
+            ous.writeObject(usuario);
+            bo.flush();
+            fo.close();
+        }catch (IOException ex){
+            //mandar mensaje de error
+        }
     }
 
-    public static Usuario leer(Context context) {
-        SharedPreferences sp = conectar(context);
-        Long dni = sp.getLong("dni", -1);
-        String apellido = sp.getString("apellido", "-1");
-        String nombre = sp.getString("nombre", "-1");
-        String email = sp.getString("email", "-1");
-        String password = sp.getString("password", "-1");
+    public static Usuario leer(Context context){
+        Usuario usuario = null;
+        conectar(context);
+        try {
+            FileInputStream fi=new FileInputStream(archivo);
 
-        Usuario usuario = new Usuario(dni, nombre, apellido, email, password);
+            BufferedInputStream bi = new BufferedInputStream(fi);
+
+            ObjectInputStream ois = new ObjectInputStream(bi);
+
+            usuario = (Usuario) ois.readObject();
+
+            fi.close();
+
+            return usuario;
+
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        }catch (IOException ex){
+
+        } catch (ClassNotFoundException e) {
+            e.printStackTrace();
+        }
         return usuario;
     }
 
-    public static Usuario login(Context context, String mail, String pass) {
-        Usuario usuario;
-        SharedPreferences sp = conectar(context);
-        Long dni = sp.getLong("dni", -1);
-        String apellido = sp.getString("apellido", "-1");
-        String nombre = sp.getString("nombre", "-1");
-        String email = sp.getString("email", "-1");
-        String password = sp.getString("password", "-1");
+    public static Usuario login(Context context, String email, String pass){
+        conectar(context);
+        Usuario usuario = leer(context);
 
-        if (email.equals(mail) && password.equals(pass)) {
-            usuario = new Usuario(dni, nombre, apellido, email, password);
-        } else {
-            return null;
+        if(usuario.getMail().equals(email) && usuario.getPassword().equals(pass)){
+            return usuario;
         }
-        return usuario;
+
+        return null;
     }
 }
